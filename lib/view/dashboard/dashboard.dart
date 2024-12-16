@@ -8,6 +8,7 @@ import 'package:grocery/view/cart/cart.dart';
 import 'package:grocery/view/categories/categories.dart';
 import 'package:grocery/view/items/itemdetails.dart';
 import 'package:grocery/view/items/itemscreen.dart';
+import 'package:grocery/view/orders/placedorder.dart';
 import 'package:shimmer/shimmer.dart';
 
 class Dashboard extends StatefulWidget {
@@ -46,41 +47,52 @@ class _DashboardState extends State<Dashboard> {
                   child: Container(
                     height: 100,
                     width: double.infinity,
-                    child: Row(mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Image.asset('assets/images/logo.png',height: 160,),
-                        Column(crossAxisAlignment: CrossAxisAlignment.start,mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(child: Text("Grocery HUB",style: GoogleFonts.alumniSans(fontSize: 50,fontWeight: FontWeight.bold,color: Colors.green.shade700))),
-                            Container(child: Text("The complete grocery solution is here",style: TextStyle(color:Colors.orange),)),
-                          ],
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Image.asset('assets/images/logo.png',height: 160,),
+                          Column(crossAxisAlignment: CrossAxisAlignment.start,mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(child: Text("Grocery HUB",style: GoogleFonts.alumniSans(fontSize: 50,fontWeight: FontWeight.bold,color: Colors.green.shade700))),
+                              Container(child: Text("The complete grocery solution is here",style: TextStyle(color:Colors.orange),)),
+                            ],
+                          ),
+                     InkWell(
+                        onTap: (){
+                          Get.to(()=>PlacedOrdersScreen());
+                        },
+                        child: Container(
+                          height: 40,width: 40,
+                          child: Center(child: Icon(Icons.card_travel_sharp,size: 35,color: Colors.green.shade700,)),
                         ),
-                    Obx(()=>InkWell(
-                      onTap: (){
-                        Get.to(()=>Cart());
-                      },
-                      child: Container(
-                        height: 60,width: 60,
-                        child: Stack(
-                          children: [
-                            Center(child: Icon(Icons.shopping_cart,size: 35,color: Colors.green.shade700,)),
-                            Align(alignment: Alignment.topRight,
-                              child: Card(
-                                elevation: 5,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                      color: Colors.orange,
-                                      shape: BoxShape.circle
-                                  ),height: 25,width: 25,
-                                  child: Center(child: Text("${cartController.cartList.length.toString()}",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),)),
+                      ),Obx(()=>InkWell(
+                        onTap: (){
+                          Get.to(()=>Cart());
+                        },
+                        child: Container(
+                          height: 40,width: 40,
+                          child: Stack(
+                            children: [
+                              Center(child: Icon(Icons.shopping_cart,size: 35,color: Colors.green.shade700,)),
+                              Align(alignment: Alignment.topRight,
+                                child: Card(
+                                  elevation: 5,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                        color: Colors.orange,
+                                        shape: BoxShape.circle
+                                    ),height: 20,width: 20,
+                                    child: Center(child: Text("${cartController.cartList.length.toString()}",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),)),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                    )],
+                      )],
+                      ),
                     ),
                   ),
                 ),

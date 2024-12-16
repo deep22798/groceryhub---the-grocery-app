@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // For jsonEncode and jsonDecode
 
 class CheckoutPage extends StatefulWidget {
   @override
@@ -16,6 +17,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   // To store the addresses
   List<String> savedAddresses = [];
+  // To store the orders
+  List<Map<String, dynamic>> savedOrders = [];
 
   // Get the product details from arguments
   final product = Get.arguments;
@@ -24,12 +27,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void initState() {
     super.initState();
     _loadSavedAddresses();
+    _loadSavedOrders();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(color: Colors.white),
         title: const Text('Buy Now', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.orange,
       ),
@@ -45,7 +50,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
               children: [
                 TextField(
                   onChanged: (value) => deliveryAddress = value,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'Enter your delivery address',
                     border: OutlineInputBorder(),
                   ),
@@ -81,30 +86,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
             title: const Text('Delivery Schedule'),
             content: Column(
               children: [
-                ListTile(
-                  title: const Text('Morning (9 AM - 12 PM)'),
-                  leading: Radio<String>(
-                    value: 'Morning (9 AM - 12 PM)',
-                    groupValue: deliverySchedule,
-                    onChanged: (value) => setState(() => deliverySchedule = value),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('Afternoon (12 PM - 3 PM)'),
-                  leading: Radio<String>(
-                    value: 'Afternoon (12 PM - 3 PM)',
-                    groupValue: deliverySchedule,
-                    onChanged: (value) => setState(() => deliverySchedule = value),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('Evening (3 PM - 6 PM)'),
-                  leading: Radio<String>(
-                    value: 'Evening (3 PM - 6 PM)',
-                    groupValue: deliverySchedule,
-                    onChanged: (value) => setState(() => deliverySchedule = value),
-                  ),
-                ),
+                _buildRadioOption('Morning (9 AM - 12 PM)'),
+                _buildRadioOption('Afternoon (12 PM - 3 PM)'),
+                _buildRadioOption('Evening (3 PM - 6 PM)'),
               ],
             ),
             isActive: _currentStep >= 1,
@@ -114,30 +98,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
             title: const Text('Payment Selection'),
             content: Column(
               children: [
-                ListTile(
-                  title: const Text('Credit/Debit Card'),
-                  leading: Radio<String>(
-                    value: 'Credit/Debit Card',
-                    groupValue: paymentMethod,
-                    onChanged: (value) => setState(() => paymentMethod = value),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('UPI (Google Pay, PhonePe)'),
-                  leading: Radio<String>(
-                    value: 'UPI (Google Pay, PhonePe)',
-                    groupValue: paymentMethod,
-                    onChanged: (value) => setState(() => paymentMethod = value),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('Cash on Delivery'),
-                  leading: Radio<String>(
-                    value: 'Cash on Delivery',
-                    groupValue: paymentMethod,
-                    onChanged: (value) => setState(() => paymentMethod = value),
-                  ),
-                ),
+                _buildPaymentOption('Credit/Debit Card'),
+                _buildPaymentOption('UPI (Google Pay, PhonePe)'),
+                _buildPaymentOption('Cash on Delivery'),
               ],
             ),
             isActive: _currentStep >= 2,
@@ -161,15 +124,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           Step(
             title: const Text('Place Order'),
-            content: Column(
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Get.snackbar('Success', 'Order has been placed successfully!');
-                  },
-                  child: const Text('Place Order'),
-                ),
-              ],
+            content: ElevatedButton(
+              onPressed: _placeOrder,
+              child: const Text('Place Order'),
             ),
             isActive: _currentStep >= 4,
             state: _currentStep > 4 ? StepState.complete : StepState.indexed,
@@ -182,8 +139,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void _onStepContinue() {
     if (_currentStep < 4) {
       setState(() => _currentStep += 1);
-    } else {
-      Get.snackbar('Success', 'Order has been placed successfully!');
     }
   }
 
@@ -193,29 +148,75 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  // Load saved addresses from SharedPreferences
   void _loadSavedAddresses() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    List<String> savedList = prefs.getStringList('saved_addresses') ?? [];
-    setState(() {
-      savedAddresses = savedList;
-    });
+    savedAddresses = prefs.getStringList('saved_addresses') ?? [];
+    setState(() {});
   }
 
-  // Save a new address (up to 3 addresses)
+  void _loadSavedOrders() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? ordersJson = prefs.getString('saved_orders');
+    if (ordersJson != null) {
+      savedOrders = List<Map<String, dynamic>>.from(jsonDecode(ordersJson));
+    }
+    setState(() {});
+  }
+
   void _saveAddress() async {
     if (deliveryAddress != null && deliveryAddress!.isNotEmpty) {
-      // Add the new address to the list
       if (!savedAddresses.contains(deliveryAddress)) {
         savedAddresses.add(deliveryAddress!);
-        if (savedAddresses.length > 3) {
-          savedAddresses.removeAt(0); // Remove the oldest address if more than 3
-        }
-        // Save updated addresses to SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setStringList('saved_addresses', savedAddresses);
-        setState(() {}); // Trigger a rebuild to show updated addresses
+        setState(() {});
       }
     }
+  }
+
+  void _placeOrder() async {
+    if (deliveryAddress == null || deliverySchedule == null || paymentMethod == null) {
+      Get.snackbar('Error', 'Please complete all steps before placing the order');
+      return;
+    }
+
+    Map<String, dynamic> order = {
+      'deliveryAddress': deliveryAddress,
+      'deliverySchedule': deliverySchedule,
+      'paymentMethod': paymentMethod,
+      'productName': product?.itmNam ?? 'N/A',
+      'productPrice': product?.salePrice ?? 'N/A',
+      'productCode': product?.itmCd ?? 'N/A',
+
+    };
+
+    savedOrders.add(order);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_orders', jsonEncode(savedOrders));
+
+    Get.snackbar('Success', 'Order has been placed successfully!');
+  }
+
+  Widget _buildRadioOption(String value) {
+    return ListTile(
+      title: Text(value),
+      leading: Radio<String>(
+        value: value,
+        groupValue: deliverySchedule,
+        onChanged: (newValue) => setState(() => deliverySchedule = newValue),
+      ),
+    );
+  }
+
+  Widget _buildPaymentOption(String value) {
+    return ListTile(
+      title: Text(value),
+      leading: Radio<String>(
+        value: value,
+        groupValue: paymentMethod,
+        onChanged: (newValue) => setState(() => paymentMethod = newValue),
+      ),
+    );
   }
 }
